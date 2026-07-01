@@ -1,95 +1,102 @@
-# WAI Deck
+# 🤖 WAI Deck
 
-WAI Deck is a local-first desktop interface for your own AI models and API keys.
+Your AI. Your Workspace. Your Control.
 
-## What it does
+---
 
-- Add Local AI or API AI
-- Chat with selected AI providers
-- Organize chats with user-created folders
-- Search all chats or search inside one folder
-- Pin, rename, move, and delete chats
-- Rename and delete folders
-- Run AI Challenge to send one prompt to multiple AIs
-- Attach text/code files as local context before sending
-- Render markdown-style code blocks and simple tables
-- Light and dark mode
+## ✨ Description
 
-## Important behavior
+WAI Deck is a local-first AI desktop workspace that lets you connect and manage multiple AI providers in a single clean interface.
 
-WAI does not provide AI models, does not sell API access, and does not run a background AI service.
+It supports both **local models** and **API-based models**, allowing you to chat, compare outputs, and organize all your AI interactions in one place.
 
-Provider requests are sent only when you explicitly:
+---
 
-1. Click **Test Connection**
-2. Send a chat message
-3. Start **AI Challenge**
+## 🧠 Core Idea
 
-## Run the web preview
+You don't use one AI.  
+You connect ALL your AIs.  
+WAI Deck orchestrates them.
+
+---
+
+## ⚙️ Features
+
+- Multi-AI chat system
+- Local AI support (Ollama, LM Studio, Jan)
+- API AI support (OpenAI, Anthropic, Gemini, OpenAI-compatible)
+- AI Challenge (run one prompt across multiple AIs)
+- Folder-based chat organization
+- Pin / Move / Rename / Delete chats
+- Search chats and folders
+- Markdown + code block rendering
+- File attachment support (text/code)
+- Light / Dark mode
+- Local test provider (no token usage)
+
+---
+
+## 🏗️ Tech Stack
+
+- Tauri v2
+- React
+- TypeScript
+- Vite
+- TailwindCSS
+- Rust backend
+
+---
+
+## 🔌 AI Provider Example
+
+```ts
+{
+  name: "Ollama",
+  type: "local",
+  endpoint: "http://localhost:11434",
+  model: "llama3.2"
+}
+```
+
+---
+
+## 🔒 Privacy
+
+- No background API calls
+- No data tracking
+- Everything runs locally unless explicitly triggered
+- BYO-AI (Bring Your Own AI)
+
+---
+
+## 🚀 Getting Started
 
 ```bash
 npm install
 npm run dev
 ```
 
-The browser preview is only for UI review. Real provider calls should be tested inside Tauri to avoid browser CORS issues.
-
-## Run the desktop app
+Run desktop app:
 
 ```bash
 npm run tauri dev
 ```
 
-## Token-free local testing
-
-Use this when you want to test the local-provider flow without installing Ollama or using paid API tokens.
-
-Terminal 1:
+Build:
 
 ```bash
-npm run local:test-server
+npm run tauri build
 ```
 
-Terminal 2:
+---
 
-```bash
-npm run tauri dev
-```
+## 📦 Platforms
 
-Inside WAI Deck:
+- Windows (.exe)
+- Linux (.AppImage / .deb)
 
-1. Click **Add AI**
-2. Choose **Local AI**
-3. Select **WAI Local Test**
-4. Base URL should be `http://127.0.0.1:8787/v1`
-5. Model should be `wai-local-test`
-6. Click **Test Connection**
-7. Save the AI
-8. Send a message
+---
 
-The response should include a code block and a table, which also tests the message renderer.
+## 📜 License
 
-## Real local model testing with Ollama
-
-Install and start Ollama, then pull a model:
-
-```bash
-ollama pull llama3.2
-```
-
-Inside WAI Deck:
-
-- Provider: **Ollama**
-- Base URL: `http://localhost:11434`
-- Model: `llama3.2`
-
-Then click **Test Connection**, save the AI, and send a message.
-
-## Tests
-
-```bash
-npm run test
-npm run build
-```
-
-Optional live-provider tests should only run manually with secrets and `LIVE_AI_TESTS=true`.
+MIT
