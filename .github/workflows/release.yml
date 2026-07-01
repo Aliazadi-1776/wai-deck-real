@@ -1,35 +1,48 @@
-name: Release
+name: WAI Deck Build & Release
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
-  release:
+  build:
+    name: Build WAI Deck
+    runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
-          - platform: ubuntu-22.04
-          - platform: windows-latest
-
-    runs-on: ${{ matrix.platform }}
+          - os: ubuntu-22.04
+            target: linux
+          - os: windows-latest
+            target: windows
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      # =========================
+      # Node Setup
+      # =========================
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
+      # =========================
+      # Rust Setup
+      # =========================
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      # =========================
+      # Linux Dependencies
+      # =========================
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -43,15 +56,62 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
+      # =========================
+      # Install JS deps
+      # =========================
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        run: npm run tauri build
+      # =========================
+      # Run tests
+      # =========================
+      - name: Run tests
+        run: npm run test
 
-      - name: Upload artifacts
+      # =========================
+      # Build frontend
+      # =========================
+      - name: Build frontend
+        run: npm run build
+
+      # =========================
+      # Install Tauri CLI
+      # =========================
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
+
+      # =========================
+      # Build Linux (AppImage + deb)
+      # =========================
+      - name: Build Linux app
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          npm run tauri build -- --bundles appimage,deb
+
+      # =========================
+      # Build Windows (exe)
+      # =========================
+      - name: Build Windows app
+        if: matrix.os == 'windows-latest'
+        run: |
+          npm run tauri build -- --bundles nsis
+
+      # =========================
+      # Upload artifacts
+      # =========================
+      - name: Upload Linux artifacts
+        if: matrix.os == 'ubuntu-22.04'
         uses: actions/upload-artifact@v4
         with:
-          name: wai-deck-${{ matrix.platform }}
+          name: wai-linux
           path: |
-            src-tauri/target/release/bundle/**/*
+            src-tauri/target/release/bundle/appimage/
+            src-tauri/target/release/bundle/deb/
+
+      - name: Upload Windows artifacts
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wai-windows
+          path: |
+            src-tauri/target/release/bundle/nsis/
