@@ -1,0 +1,22 @@
+[package]
+name = "wai-deck"
+version = "0.1.0"
+description = "WAI Deck - BYO-AI desktop workspace"
+authors = ["WAI Contributors"]
+edition = "2021"
+
+[lib]
+name = "wai_deck_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["time", "macros", "rt-multi-thread"] }
+reqwest = { version = "0.12", features = ["json"] }
+futures = "0.3"
