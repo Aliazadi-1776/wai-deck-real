@@ -7,39 +7,35 @@ on:
 
 jobs:
   build:
-    name: Build WAI Deck
+    name: Build WAI Deck (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-22.04
-            target: linux
-          - os: windows-latest
-            target: windows
+        os: [ubuntu-22.04, windows-latest]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       # =========================
-      # Node Setup
+      # Node.js setup
       # =========================
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
 
       # =========================
-      # Rust Setup
+      # Rust setup
       # =========================
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       # =========================
-      # Linux Dependencies
+      # Linux deps (only Ubuntu)
       # =========================
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-22.04'
@@ -57,10 +53,10 @@ jobs:
             librsvg2-dev
 
       # =========================
-      # Install JS deps
+      # Install dependencies
       # =========================
-      - name: Install dependencies
-        run: npm ci
+      - name: Install npm dependencies
+        run: npm install --no-audit --no-fund
 
       # =========================
       # Run tests
@@ -81,23 +77,21 @@ jobs:
         run: npm install -g @tauri-apps/cli
 
       # =========================
-      # Build Linux (AppImage + deb)
+      # Build Linux
       # =========================
       - name: Build Linux app
         if: matrix.os == 'ubuntu-22.04'
-        run: |
-          npm run tauri build -- --bundles appimage,deb
+        run: npm run tauri build -- --bundles appimage,deb
 
       # =========================
-      # Build Windows (exe)
+      # Build Windows
       # =========================
       - name: Build Windows app
         if: matrix.os == 'windows-latest'
-        run: |
-          npm run tauri build -- --bundles nsis
+        run: npm run tauri build -- --bundles nsis
 
       # =========================
-      # Upload artifacts
+      # Upload artifacts (Linux)
       # =========================
       - name: Upload Linux artifacts
         if: matrix.os == 'ubuntu-22.04'
@@ -108,6 +102,9 @@ jobs:
             src-tauri/target/release/bundle/appimage/
             src-tauri/target/release/bundle/deb/
 
+      # =========================
+      # Upload artifacts (Windows)
+      # =========================
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
