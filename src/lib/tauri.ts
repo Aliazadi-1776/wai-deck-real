@@ -1,12 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
 import type { AIConnection, ChallengeOutput } from "../types";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function invokeTauri<T>(command: string, args: Record<string, unknown>): Promise<T> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<T>(command, args);
+}
+
 export async function testAIConnection(ai: AIConnection): Promise<AIConnection> {
   if (isTauri) {
-    return invoke<AIConnection>("test_ai_connection", { ai });
+    return invokeTauri<AIConnection>("test_ai_connection", { ai });
   }
 
   await sleep(300);
@@ -15,7 +19,7 @@ export async function testAIConnection(ai: AIConnection): Promise<AIConnection> 
 
 export async function sendMessage(ai: AIConnection, prompt: string): Promise<string> {
   if (isTauri) {
-    return invoke<string>("send_message", { ai, prompt });
+    return invokeTauri<string>("send_message", { ai, prompt });
   }
 
   await sleep(300);
@@ -24,7 +28,7 @@ export async function sendMessage(ai: AIConnection, prompt: string): Promise<str
 
 export async function runChallenge(ais: AIConnection[], prompt: string): Promise<ChallengeOutput[]> {
   if (isTauri) {
-    return invoke<ChallengeOutput[]>("run_challenge", { ais, prompt });
+    return invokeTauri<ChallengeOutput[]>("run_challenge", { ais, prompt });
   }
 
   const outputs = await Promise.all(

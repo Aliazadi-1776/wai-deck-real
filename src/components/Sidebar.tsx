@@ -16,10 +16,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AIConnection, ChatSummary, Folder as FolderType } from "../types";
-import { ConfirmDialog } from "./ConfirmDialog";
-import { TextInputDialog } from "./TextInputDialog";
+
+const ConfirmDialog = lazy(() => import("./ConfirmDialog").then((module) => ({ default: module.ConfirmDialog })));
+const TextInputDialog = lazy(() => import("./TextInputDialog").then((module) => ({ default: module.TextInputDialog })));
 
 interface SidebarProps {
   ais: AIConnection[];
@@ -39,6 +40,10 @@ interface SidebarProps {
   onDeleteChat: (chatId: string) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
+}
+
+function DialogBoundary({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm" />}>{children}</Suspense>;
 }
 
 export function Sidebar({
@@ -76,6 +81,7 @@ export function Sidebar({
   }, [activeFolderId, folders]);
 
   const aiById = useMemo(() => new Map(ais.map((ai) => [ai.id, ai])), [ais]);
+  const folderById = useMemo(() => new Map(folders.map((folder) => [folder.id, folder])), [folders]);
   const folderCounts = useMemo(() => {
     const map = new Map<string, number>();
     chats.forEach((chat) => {
@@ -92,12 +98,12 @@ export function Sidebar({
       if (!query) return true;
 
       const ai = aiById.get(chat.aiId);
-      const folder = folders.find((item) => item.id === chat.folderId);
+      const folder = chat.folderId ? folderById.get(chat.folderId) : undefined;
       const searchableText = [chat.title, ai?.name, ai?.model, folder?.name, chat.updatedAt].filter(Boolean).join(" ").toLowerCase();
       return searchableText.includes(query);
     });
     return [...list].sort((a, b) => Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned)));
-  }, [activeFolderId, aiById, chats, folders, searchQuery]);
+  }, [activeFolderId, aiById, chats, folderById, searchQuery]);
 
   return (
     <aside className="flex h-screen w-[324px] shrink-0 flex-col border-r border-line bg-paper p-4">
@@ -235,7 +241,7 @@ export function Sidebar({
           {visibleChats.map((chat) => {
             const active = activeChatId === chat.id;
             const ai = aiById.get(chat.aiId);
-            const folder = folders.find((item) => item.id === chat.folderId);
+            const folder = chat.folderId ? folderById.get(chat.folderId) : undefined;
             return (
               <div key={chat.id} className={`group relative rounded-3xl border p-3 transition ${active ? "border-ink bg-ink text-paper" : "border-line bg-canvas hover:border-ink hover:bg-paper"}`}>
                 <div className="flex items-start gap-2">
@@ -338,62 +344,70 @@ export function Sidebar({
       </div>
 
       {renameChat && (
-        <TextInputDialog
-          title="Rename chat"
-          description="Give this conversation a clearer title."
-          label="Chat title"
-          initialValue={renameChat.title}
-          confirmLabel="Rename"
-          onCancel={() => setRenameChat(null)}
-          onConfirm={(value) => {
-            onRenameChat(renameChat.id, value);
-            setRenameChat(null);
-          }}
-        />
+        <DialogBoundary>
+          <TextInputDialog
+            title="Rename chat"
+            description="Give this conversation a clearer title."
+            label="Chat title"
+            initialValue={renameChat.title}
+            confirmLabel="Rename"
+            onCancel={() => setRenameChat(null)}
+            onConfirm={(value) => {
+              onRenameChat(renameChat.id, value);
+              setRenameChat(null);
+            }}
+          />
+        </DialogBoundary>
       )}
 
       {deleteChat && (
-        <ConfirmDialog
-          title="Delete chat?"
-          description={`This will remove “${deleteChat.title}” and all messages inside it. This action cannot be undone.`}
-          confirmLabel="Delete chat"
-          danger
-          onCancel={() => setDeleteChat(null)}
-          onConfirm={() => {
-            onDeleteChat(deleteChat.id);
-            setDeleteChat(null);
-          }}
-        />
+        <DialogBoundary>
+          <ConfirmDialog
+            title="Delete chat?"
+            description={`This will remove “${deleteChat.title}” and all messages inside it. This action cannot be undone.`}
+            confirmLabel="Delete chat"
+            danger
+            onCancel={() => setDeleteChat(null)}
+            onConfirm={() => {
+              onDeleteChat(deleteChat.id);
+              setDeleteChat(null);
+            }}
+          />
+        </DialogBoundary>
       )}
 
       {renameFolder && (
-        <TextInputDialog
-          title="Rename folder"
-          description="Update the folder name. Chats inside it will stay there."
-          label="Folder name"
-          initialValue={renameFolder.name}
-          confirmLabel="Rename"
-          onCancel={() => setRenameFolder(null)}
-          onConfirm={(value) => {
-            onRenameFolder(renameFolder.id, value);
-            setRenameFolder(null);
-          }}
-        />
+        <DialogBoundary>
+          <TextInputDialog
+            title="Rename folder"
+            description="Update the folder name. Chats inside it will stay there."
+            label="Folder name"
+            initialValue={renameFolder.name}
+            confirmLabel="Rename"
+            onCancel={() => setRenameFolder(null)}
+            onConfirm={(value) => {
+              onRenameFolder(renameFolder.id, value);
+              setRenameFolder(null);
+            }}
+          />
+        </DialogBoundary>
       )}
 
       {deleteFolder && (
-        <ConfirmDialog
-          title="Delete folder?"
-          description={`This will delete “${deleteFolder.name}”. Chats inside it will not be deleted; they will move back to All chats.`}
-          confirmLabel="Delete folder"
-          danger
-          onCancel={() => setDeleteFolder(null)}
-          onConfirm={() => {
-            onDeleteFolder(deleteFolder.id);
-            setDeleteFolder(null);
-            setActiveFolderId("all");
-          }}
-        />
+        <DialogBoundary>
+          <ConfirmDialog
+            title="Delete folder?"
+            description={`This will delete “${deleteFolder.name}”. Chats inside it will not be deleted; they will move back to All chats.`}
+            confirmLabel="Delete folder"
+            danger
+            onCancel={() => setDeleteFolder(null)}
+            onConfirm={() => {
+              onDeleteFolder(deleteFolder.id);
+              setDeleteFolder(null);
+              setActiveFolderId("all");
+            }}
+          />
+        </DialogBoundary>
       )}
     </aside>
   );

@@ -1,5 +1,5 @@
 import { Check, Play, RotateCcw, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { runChallenge } from "../lib/tauri";
 import type { AIConnection, ChallengeOutput } from "../types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -16,9 +16,10 @@ export function AIChallenge({ ais, onClose }: AIChallengeProps) {
   const [outputs, setOutputs] = useState<ChallengeOutput[]>([]);
   const [loading, setLoading] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   async function startChallenge() {
-    const selectedAIs = ais.filter((ai) => selectedIds.includes(ai.id));
+    const selectedAIs = ais.filter((ai) => selectedIdSet.has(ai.id));
     if (!prompt.trim() || selectedAIs.length === 0) return;
     setLoading(true);
     setOutputs([]);
@@ -65,7 +66,7 @@ export function AIChallenge({ ais, onClose }: AIChallengeProps) {
 
           <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             {ais.map((ai) => {
-              const active = selectedIds.includes(ai.id);
+              const active = selectedIdSet.has(ai.id);
               return (
                 <button
                   type="button"

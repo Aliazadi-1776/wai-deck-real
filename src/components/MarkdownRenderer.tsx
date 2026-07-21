@@ -1,5 +1,5 @@
 import { Check, Copy } from "lucide-react";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 
 type Block =
   | { type: "code"; language: string; code: string }
@@ -125,7 +125,7 @@ function TableBlock({ headers, rows }: { headers: string[]; rows: string[][] }) 
   );
 }
 
-export function MarkdownRenderer({ content }: { content: string }) {
+export const MarkdownRenderer = memo(function MarkdownRenderer({ content }: { content: string }) {
   const blocks = useMemo(() => parseBlocks(content), [content]);
 
   return (
@@ -137,4 +137,4 @@ export function MarkdownRenderer({ content }: { content: string }) {
       })}
     </div>
   );
-}
+});

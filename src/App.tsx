@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { AddAIModal } from "./components/AddAIModal";
-import { AIChallenge } from "./components/AIChallenge";
-import { AISettings } from "./components/AISettings";
-import { ChatView } from "./components/ChatView";
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Onboarding } from "./components/Onboarding";
-import { Sidebar } from "./components/Sidebar";
-import { TextInputDialog } from "./components/TextInputDialog";
 import { initialAIs, initialChats, initialFolders, initialMessages } from "./mockData";
 import { deleteFolderAndUnassignChats, renameFolderById } from "./lib/folderUtils";
 import type { AIConnection, AIType, ChatSummary, Folder, Message } from "./types";
+
+const AddAIModal = lazy(() => import("./components/AddAIModal").then((module) => ({ default: module.AddAIModal })));
+const AIChallenge = lazy(() => import("./components/AIChallenge").then((module) => ({ default: module.AIChallenge })));
+const AISettings = lazy(() => import("./components/AISettings").then((module) => ({ default: module.AISettings })));
+const ChatView = lazy(() => import("./components/ChatView").then((module) => ({ default: module.ChatView })));
+const Sidebar = lazy(() => import("./components/Sidebar").then((module) => ({ default: module.Sidebar })));
+const TextInputDialog = lazy(() => import("./components/TextInputDialog").then((module) => ({ default: module.TextInputDialog })));
 
 type ThemeMode = "light" | "dark";
 
@@ -41,6 +42,35 @@ function writeStorage<T>(key: string, value: T) {
 
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function MainFallback() {
+  return (
+    <main className="flex h-screen flex-1 items-center justify-center bg-canvas p-8">
+      <div className="card px-5 py-4 text-sm font-bold text-muted">Loading...</div>
+    </main>
+  );
+}
+
+function SidebarFallback() {
+  return (
+    <aside className="flex h-screen w-[324px] shrink-0 flex-col border-r border-line bg-paper p-4">
+      <div className="h-11 w-44 rounded-2xl bg-soft" />
+      <div className="mt-7 grid grid-cols-2 gap-2">
+        <div className="h-11 rounded-2xl bg-soft" />
+        <div className="h-11 rounded-2xl bg-soft" />
+      </div>
+      <div className="mt-8 space-y-2">
+        <div className="h-10 rounded-2xl bg-soft" />
+        <div className="h-10 rounded-2xl bg-soft" />
+        <div className="h-10 rounded-2xl bg-soft" />
+      </div>
+    </aside>
+  );
+}
+
+function ModalBoundary({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm" />}>{children}</Suspense>;
 }
 
 export default function App() {
@@ -197,66 +227,84 @@ export default function App() {
     return (
       <>
         <Onboarding onAddLocal={() => setAddType("local")} onAddApi={() => setAddType("api")} />
-        {addType && <AddAIModal initialType={addType} onClose={() => setAddType(null)} onSave={handleAddAI} />}
+        {addType && (
+          <ModalBoundary>
+            <AddAIModal initialType={addType} onClose={() => setAddType(null)} onSave={handleAddAI} />
+          </ModalBoundary>
+        )}
       </>
     );
   }
 
   return (
     <div className="flex min-h-screen bg-canvas text-ink">
-      <Sidebar
-        ais={ais}
-        folders={folders}
-        chats={chats}
-        activeChatId={activeChatId}
-        theme={theme}
-        onToggleTheme={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
-        onNewChat={handleNewChat}
-        onNewFolder={handleNewFolder}
-        onAddAI={() => setAddType("local")}
-        onChallenge={() => setShowChallenge(true)}
-        onSelectChat={(chatId) => {
-          setActiveChatId(chatId);
-          setShowChallenge(false);
-          const chat = chats.find((item) => item.id === chatId);
-          if (chat) setActiveAiId(chat.aiId);
-        }}
-        onTogglePin={handleTogglePin}
-        onMoveChat={handleMoveChat}
-        onRenameChat={handleRenameChat}
-        onDeleteChat={handleDeleteChat}
-        onRenameFolder={handleRenameFolder}
-        onDeleteFolder={handleDeleteFolder}
-      />
+      <Suspense fallback={<SidebarFallback />}>
+        <Sidebar
+          ais={ais}
+          folders={folders}
+          chats={chats}
+          activeChatId={activeChatId}
+          theme={theme}
+          onToggleTheme={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
+          onNewChat={handleNewChat}
+          onNewFolder={handleNewFolder}
+          onAddAI={() => setAddType("local")}
+          onChallenge={() => setShowChallenge(true)}
+          onSelectChat={(chatId) => {
+            setActiveChatId(chatId);
+            setShowChallenge(false);
+            const chat = chats.find((item) => item.id === chatId);
+            if (chat) setActiveAiId(chat.aiId);
+          }}
+          onTogglePin={handleTogglePin}
+          onMoveChat={handleMoveChat}
+          onRenameChat={handleRenameChat}
+          onDeleteChat={handleDeleteChat}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+        />
+      </Suspense>
 
       {showChallenge ? (
-        <AIChallenge ais={ais} onClose={() => setShowChallenge(false)} />
+        <Suspense fallback={<MainFallback />}>
+          <AIChallenge ais={ais} onClose={() => setShowChallenge(false)} />
+        </Suspense>
       ) : (
-        <ChatView
-          ais={ais}
-          activeAiId={activeAiId}
-          activeChat={activeChat}
-          messages={activeMessages}
-          onSelectAI={setActiveAiId}
-          onOpenSettings={() => setShowSettings(true)}
-          onNewMessage={handleMessageCreated}
-        />
+        <Suspense fallback={<MainFallback />}>
+          <ChatView
+            ais={ais}
+            activeAiId={activeAiId}
+            activeChat={activeChat}
+            messages={activeMessages}
+            onSelectAI={setActiveAiId}
+            onOpenSettings={() => setShowSettings(true)}
+            onNewMessage={handleMessageCreated}
+          />
+        </Suspense>
       )}
 
-      {addType && <AddAIModal initialType={addType} onClose={() => setAddType(null)} onSave={handleAddAI} />}
+      {addType && (
+        <ModalBoundary>
+          <AddAIModal initialType={addType} onClose={() => setAddType(null)} onSave={handleAddAI} />
+        </ModalBoundary>
+      )}
       {showSettings && activeAI && (
-        <AISettings ai={activeAI} onClose={() => setShowSettings(false)} onDelete={handleDeleteAI} onSave={handleUpdateAI} />
+        <ModalBoundary>
+          <AISettings ai={activeAI} onClose={() => setShowSettings(false)} onDelete={handleDeleteAI} onSave={handleUpdateAI} />
+        </ModalBoundary>
       )}
       {showFolderDialog && (
-        <TextInputDialog
-          title="Create folder"
-          description="Folders are optional. Create one when you want to organize related chats."
-          label="Folder name"
-          placeholder="Example: SEO projects"
-          confirmLabel="Create folder"
-          onCancel={() => setShowFolderDialog(false)}
-          onConfirm={handleCreateFolder}
-        />
+        <ModalBoundary>
+          <TextInputDialog
+            title="Create folder"
+            description="Folders are optional. Create one when you want to organize related chats."
+            label="Folder name"
+            placeholder="Example: SEO projects"
+            confirmLabel="Create folder"
+            onCancel={() => setShowFolderDialog(false)}
+            onConfirm={handleCreateFolder}
+          />
+        </ModalBoundary>
       )}
     </div>
   );

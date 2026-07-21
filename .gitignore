@@ -8,6 +8,9 @@ dist/
 # Tauri / Rust build
 src-tauri/target/
 
+# Local GitHub release assets
+release/
+
 # Logs
 *.log
 npm-debug.log*
